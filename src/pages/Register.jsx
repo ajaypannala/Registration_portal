@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useFormik } from "formik";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import InputField from "../components/InputField";
 import SelectField from "../components/SelectField";
@@ -11,10 +11,8 @@ import registerSchema from "../validation/registerSchema";
 import { registerUser } from "../services/authService";
 
 const Register = () => {
-  const [status, setStatus] = useState({
-    type: "",
-    message: "",
-  });
+  const navigate = useNavigate();
+  const [status, setStatus] = useState({ type: "", message: "" });
 
   const formik = useFormik({
     initialValues: {
@@ -28,34 +26,31 @@ const Register = () => {
       dateOfBirth: "",
       terms: false,
     },
-
     validationSchema: registerSchema,
-
     onSubmit: async (values, { resetForm }) => {
-      setStatus({
-        type: "",
-        message: "",
-      });
+      setStatus({ type: "", message: "" });
 
       try {
-        const userData = {
-          firstName: values.firstName,
-          lastName: values.lastName,
-          email: values.email,
+        await registerUser({
+          firstName: values.firstName.trim(),
+          lastName: values.lastName.trim(),
+          email: values.email.trim(),
           phone: values.phone,
           password: values.password,
           gender: values.gender,
           birthDate: values.dateOfBirth,
-        };
-
-        await registerUser(userData);
-
-        setStatus({
-          type: "success",
-          message: "Registration successful!",
         });
 
         resetForm();
+        setStatus({
+          type: "success",
+          message: "Registration successful! Redirecting to login...",
+        });
+
+        navigate("/login", {
+          replace: true,
+          state: { registrationSuccess: true },
+        });
       } catch (error) {
         setStatus({
           type: "error",
@@ -71,28 +66,16 @@ const Register = () => {
   return (
     <div className="page-container">
       <div className="register-card">
-
         <div className="register-header">
-          <div className="logo">
-            RP
-          </div>
-
+          <div className="logo">RP</div>
           <h1>Create Account</h1>
-
-          <p>
-            Register your account to get started
-          </p>
+          <p>Register your account to get started</p>
         </div>
 
-        <AlertMessage
-          type={status.type}
-          message={status.message}
-        />
+        <AlertMessage type={status.type} message={status.message} />
 
         <form onSubmit={formik.handleSubmit}>
-
           <div className="form-grid">
-
             <InputField
               label="First Name"
               name="firstName"
@@ -144,18 +127,9 @@ const Register = () => {
               name="gender"
               formik={formik}
               options={[
-                {
-                  value: "male",
-                  label: "Male",
-                },
-                {
-                  value: "female",
-                  label: "Female",
-                },
-                {
-                  value: "other",
-                  label: "Other",
-                },
+                { value: "male", label: "Male" },
+                { value: "female", label: "Female" },
+                { value: "other", label: "Other" },
               ]}
             />
 
@@ -165,11 +139,9 @@ const Register = () => {
               type="date"
               formik={formik}
             />
-
           </div>
 
           <div className="terms">
-
             <input
               type="checkbox"
               id="terms"
@@ -177,34 +149,28 @@ const Register = () => {
               checked={formik.values.terms}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
+              aria-describedby="terms-error"
             />
-
-            <label htmlFor="terms">
-              I agree to the Terms & Conditions
-            </label>
-
+            <label htmlFor="terms">I agree to the Terms & Conditions</label>
           </div>
 
           {formik.touched.terms && formik.errors.terms && (
-            <p className="error-text">
+            <p id="terms-error" className="error-text" role="alert">
               {formik.errors.terms}
             </p>
           )}
 
           <Button
             loading={formik.isSubmitting}
+            loadingText="Creating account..."
           >
             Create Account
           </Button>
-
         </form>
 
         <div className="login-text">
-          Already have an account?
-          {" "}
-          <Link to="/login">Login</Link>
+          Already have an account? <Link to="/login">Login</Link>
         </div>
-
       </div>
     </div>
   );

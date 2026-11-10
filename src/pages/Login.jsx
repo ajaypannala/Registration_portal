@@ -11,7 +11,6 @@ import { loginUser } from "../services/authService";
 
 const Login = () => {
   const navigate = useNavigate();
-
   const [message, setMessage] = useState("");
 
   const formik = useFormik({
@@ -19,25 +18,14 @@ const Login = () => {
       email: "",
       password: "",
     },
-
     validationSchema: loginSchema,
-
     onSubmit: async (values) => {
       setMessage("");
 
       try {
-        const response = await loginUser(
-          values.email,
-          values.password
-        );
-
-        localStorage.setItem(
-          "user",
-          JSON.stringify(response)
-        );
-
-        navigate("/dashboard");
-
+        const response = await loginUser(values.email, values.password);
+        localStorage.setItem("user", JSON.stringify(response));
+        navigate("/dashboard", { replace: true });
       } catch (error) {
         setMessage(
           error instanceof Error
@@ -50,30 +38,16 @@ const Login = () => {
 
   return (
     <div className="page-container">
-
       <div className="login-card">
-
         <div className="register-header">
-
-          <div className="logo">
-            RP
-          </div>
-
+          <div className="logo">RP</div>
           <h1>Welcome Back</h1>
-
-          <p>
-            Login to your account
-          </p>
-
+          <p>Login to your account</p>
         </div>
 
-        <AlertMessage
-          type="error"
-          message={message}
-        />
+        <AlertMessage type="error" message={message} />
 
         <form onSubmit={formik.handleSubmit}>
-
           <InputField
             label="Email Address"
             name="email"
@@ -90,24 +64,18 @@ const Login = () => {
             formik={formik}
           />
 
-          <Button loading={formik.isSubmitting}>
+          <Button
+            loading={formik.isSubmitting}
+            loadingText="Logging in..."
+          >
             Login
           </Button>
-
         </form>
 
         <div className="login-text">
-
-          Don't have an account?{" "}
-
-          <Link to="/register">
-            Register
-          </Link>
-
+          Don't have an account? <Link to="/register">Register</Link>
         </div>
-
       </div>
-
     </div>
   );
 };

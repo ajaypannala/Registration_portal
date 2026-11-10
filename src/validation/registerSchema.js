@@ -2,14 +2,17 @@ import * as Yup from "yup";
 
 const registerSchema = Yup.object({
   firstName: Yup.string()
+    .trim()
     .min(2, "First name must contain at least 2 characters")
     .required("First name is required"),
 
   lastName: Yup.string()
+    .trim()
     .min(2, "Last name must contain at least 2 characters")
     .required("Last name is required"),
 
   email: Yup.string()
+    .trim()
     .email("Enter a valid email address")
     .required("Email is required"),
 
@@ -26,9 +29,12 @@ const registerSchema = Yup.object({
     .required("Please confirm your password"),
 
   gender: Yup.string()
+    .oneOf(["male", "female", "other"], "Please select a valid gender")
     .required("Please select your gender"),
 
   dateOfBirth: Yup.date()
+    .typeError("Enter a valid date of birth")
+    .max(new Date(), "Date of birth cannot be in the future")
     .required("Date of birth is required"),
 
   terms: Yup.boolean()

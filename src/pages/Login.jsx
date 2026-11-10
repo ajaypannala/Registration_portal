@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useFormik } from "formik";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import InputField from "../components/InputField";
 import Button from "../components/Button";
@@ -11,7 +11,10 @@ import { loginUser } from "../services/authService";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [message, setMessage] = useState("");
+
+  const registrationSuccess = location.state?.registrationSuccess === true;
 
   const formik = useFormik({
     initialValues: {
@@ -45,6 +48,12 @@ const Login = () => {
           <p>Login to your account</p>
         </div>
 
+        {registrationSuccess && (
+          <AlertMessage
+            type="success"
+            message="Registration successful! Please log in."
+          />
+        )}
         <AlertMessage type="error" message={message} />
 
         <form onSubmit={formik.handleSubmit}>

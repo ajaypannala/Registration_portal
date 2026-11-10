@@ -5,11 +5,16 @@ const PASSWORD_HASH_ITERATIONS = 310000;
 const getRegisteredUsers = () => {
   const storedUsers = localStorage.getItem(REGISTERED_USERS_KEY);
 
-  if (!storedUsers) {
-    return [];
-  }
+  if (!storedUsers) return [];
 
-  const users = JSON.parse(storedUsers);
+  let users;
+  try {
+    users = JSON.parse(storedUsers);
+  } catch {
+    throw new Error(
+      "Saved account data is corrupted. Clear the registeredUsers browser data and register again."
+    );
+  }
 
   if (!Array.isArray(users)) {
     throw new Error("Saved account data is invalid. Please register again.");
@@ -48,7 +53,7 @@ const hashPassword = async (password, salt) => {
 };
 
 const createSalt = () => {
-  if (!globalThis.crypto?.getRandomValues) {
+  if (!globalThis.crypto?.getRandomValues || !globalThis.crypto?.randomUUID) {
     throw new Error("Secure account storage is unavailable in this browser.");
   }
 
@@ -66,7 +71,7 @@ export const registerUser = async (userData) => {
   const email = userData.email.trim().toLowerCase();
   const users = getRegisteredUsers();
 
-  if (users.some((user) => user.email === email)) {
+  if (users.some((user) => user?.email?.toLowerCase() === email)) {
     throw new Error("An account with this email already exists. Please log in.");
   }
 
@@ -75,10 +80,11 @@ export const registerUser = async (userData) => {
     byte.toString(16).padStart(2, "0")
   ).join("");
   const passwordHash = await hashPassword(userData.password, salt);
+
   const user = {
     id: crypto.randomUUID(),
-    firstName: userData.firstName,
-    lastName: userData.lastName,
+    firstName: userData.firstName.trim(),
+    lastName: userData.lastName.trim(),
     email,
     phone: userData.phone,
     gender: userData.gender,
@@ -87,7 +93,16 @@ export const registerUser = async (userData) => {
     passwordHash,
   };
 
-  localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify([...users, user]));
+  try {
+    localStorage.setItem(
+      REGISTERED_USERS_KEY,
+      JSON.stringify([...users, user])
+    );
+  } catch {
+    throw new Error(
+      "Could not save your account in this browser. Check available storage and try again."
+    );
+  }
 
   return withoutCredentials(user);
 };
@@ -95,10 +110,20 @@ export const registerUser = async (userData) => {
 export const loginUser = async (email, password) => {
   const normalizedEmail = email.trim().toLowerCase();
   const user = getRegisteredUsers().find(
-    (registeredUser) => registeredUser.email === normalizedEmail
+    (registeredUser) => registeredUser?.email?.toLowerCase() === normalizedEmail
   );
 
   if (user) {
+    if (
+      typeof user.salt !== "string" ||
+      !/^[a-f0-9]{32}$/i.test(user.salt) ||
+      typeof user.passwordHash !== "string"
+    ) {
+      throw new Error(
+        "This saved account is invalid. Please clear its browser data and register again."
+      );
+    }
+
     const salt = Uint8Array.from(
       user.salt.match(/.{2}/g),
       (byte) => parseInt(byte, 16)
@@ -111,9 +136,14 @@ export const loginUser = async (email, password) => {
     return withoutCredentials(user);
   }
 
-  const userResponse = await fetch(
-    `${API_URL}/users/filter?key=email&value=${encodeURIComponent(normalizedEmail)}`
-  );
+  let userResponse;
+  try {
+    userResponse = await fetch(
+      `${API_URL}/users/filter?key=email&value=${encodeURIComponent(normalizedEmail)}`
+    );
+  } catch {
+    throw new Error("Unable to connect. Check your internet connection and try again.");
+  }
 
   if (!userResponse.ok) {
     throw new Error("Invalid email or password.");
@@ -122,20 +152,23 @@ export const loginUser = async (email, password) => {
   const { users } = await userResponse.json();
   const demoUser = users?.[0];
 
-  if (!demoUser) {
+  if (!demoUser?.username) {
     throw new Error("Invalid email or password.");
   }
 
-  const response = await fetch(`${API_URL}/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      username: demoUser.username,
-      password,
-    }),
-  });
+  let response;
+  try {
+    response = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: demoUser.username,
+        password,
+      }),
+    });
+  } catch {
+    throw new Error("Unable to connect. Check your internet connection and try again.");
+  }
 
   if (!response.ok) {
     throw new Error("Invalid email or password.");
